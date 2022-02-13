@@ -3,16 +3,39 @@ package cmd
 import (
 	"fmt"
 	"github.com/giwiro/walkline/core"
-
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Long: `Initializes the version table in the default schema`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		fmt.Println("flags", cmd.Flags().Lookup("url"))
+		err := cmd.MarkFlagRequired("url")
+		if err != nil {
+			return 
+		}
+		fmt.Println("pflags", cmd.PersistentFlags().Lookup("url"))
+		err = viper.BindPFlag("url", cmd.Flags().Lookup("url"))
+		if err != nil {
+			return 
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var url = "postgres://usher_admin:tiendada123@localhost/usher"
+		// var url = "postgres://usher_admin:tiendada123@localhost/usher"
+        var url string
+        var urlFlag = cmd.Flag("url")
+
+        fmt.Println("urlFlag", urlFlag.Value)
+
+        if len(urlFlag.Value.String()) > 0 {
+            url = urlFlag.Value.String()
+        }
+
+        fmt.Println("url", url)
+
 		err := core.CreateDatabaseVersionTable(url)
 		if err != nil {
 			fmt.Println(err)

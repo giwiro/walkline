@@ -2,7 +2,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 	"github.com/giwiro/walkline/utils"
 	"io/fs"
 	"io/ioutil"
@@ -44,8 +43,6 @@ func BuildMigrationTreeFromPath(dir string) (*MigrationNode, *[]*MigrationFailed
 	if dir != "" {
 		tries = []string{dir}
 	}
-
-	fmt.Println(tries)
 
 	for _, d := range tries {
 		if _, err := os.Stat(d); os.IsNotExist(err) {

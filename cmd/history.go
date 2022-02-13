@@ -19,17 +19,27 @@ var historyCmd = &cobra.Command{
 			migrationPath = pathFlag.Value.String()
 		}
 
-		var url = "postgres://usher_admin:tiendada123@localhost/usher?sslmode=disable"
-		version, err := core.GetCurrentDatabaseVersion(url)
+		var url string
+		var urlFlag = cmd.Flag("url")
+
+		fmt.Println("urlFlag", urlFlag.Value)
+
+		if len(urlFlag.Value.String()) > 0 {
+			url = urlFlag.Value.String()
+		}
+
+		versionShort, _, err := core.GetCurrentDatabaseVersion(url)
+
 		if err != nil {
 			fmt.Println("Could not get current DB version")
 		}
 		firstNode, _, err := core.BuildMigrationTreeFromPath(migrationPath)
+
 		if err != nil {
 			log.Fatal(err)
 		}
 		// fmt.Println(firstNode.NextMigrationNode.File.Content)
-		core.PrintMigrationTree(firstNode, version)
+		core.PrintMigrationTree(firstNode, versionShort)
 	},
 }
 

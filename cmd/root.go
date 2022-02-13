@@ -57,14 +57,14 @@ func init() {
 	rootCmd.PersistentFlags().String("url", "", "sql database connection url")
 
 	// Bind with Viper
-	err := viper.BindPFlag("flavor", rootCmd.PersistentFlags().Lookup("flavor"))
+	/* err := viper.BindPFlag("flavor", rootCmd.PersistentFlags().Lookup("flavor"))
 	if err != nil {
 		fmt.Println(err)
 	}
 	err = viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
 	if err != nil {
 		fmt.Println(err)
-	}
+	} */
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -76,7 +76,6 @@ func initConfig() {
 		// Use config file from the flag
 		viper.SetConfigFile(cfgFile)
 	} else {
-		fmt.Println("find!")
 		// Find home directory
 		home, err := os.UserHomeDir()
 
@@ -105,7 +104,5 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 		fmt.Println("flavor:", viper.Get("flavor"))
-	} else {
-		log.Fatal("Can't read config:", err)
 	}
 }

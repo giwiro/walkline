@@ -40,7 +40,7 @@ func ParseVersionShort(versionShort string) (*VersionShort, error) {
 	result := VersionShortRegex.FindAllStringSubmatch(versionShort, -1)
 
 	if result == nil || len(result[0]) <= 1 {
-		return nil, errors.New("bad format")
+		return nil, errors.New("bad version format")
 	}
 
 	return &VersionShort{

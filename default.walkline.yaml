@@ -1,0 +1,2 @@
+url: postgres://user:password@localhost/usher?sslmode=disable
+flavor: postgresql

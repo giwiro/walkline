@@ -23,32 +23,32 @@ var pgTransactionTemplate, _ = template.New("pgTransaction").Parse(`{{define "pg
 COMMIT;
 {{end}}`)
 
-var SqlConnectionUrlRegex = regexp.MustCompile("^([a-z]+?):\\/\\/(.+?):(.+?)@([\\w:\\.]+?)\\/([\\w]+?)([\\?].+?)?$")
+var SqlConnectionUrlRegex = regexp.MustCompile("^([a-z]+?):\\/\\/(.+?):(.+?)@([\\w:\\.]+?)\\/([\\w_]+?)([\\?].+?)?$")
 
-func GetDatabaseConnection(url string) (*sql.DB, error) {
+func GetDatabaseConnection(url string) (*sql.DB, string, error) {
 	result := SqlConnectionUrlRegex.FindAllStringSubmatch(url, -1)
 
 	if result == nil || len(result[0]) <= 1 {
-		return nil, errors.New("bad format")
+		return nil, "", errors.New("connection url bad format")
 	}
 
-	fmt.Println("Connecting " + "(" + result[0][1] + ")" + " to: " + url)
-	fmt.Println()
+	var flavor = result[0][1]
 
-	open, err := sql.Open(result[0][1], url)
+	fmt.Println("Connecting " + "(" + flavor + ")" + " to: " + url)
+
+	open, err := sql.Open(flavor, url)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return nil, "", err
 	}
 
-	return open, nil
+	return open, flavor, nil
 }
 
 func CreateDatabaseVersionTable(url string) error {
-	DB, err := GetDatabaseConnection(url)
+	DB, _, err := GetDatabaseConnection(url)
 
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -68,12 +68,12 @@ func CreateDatabaseVersionTable(url string) error {
 	return nil
 }
 
-func GetCurrentDatabaseVersion(url string) (string, error) {
-	DB, err := GetDatabaseConnection(url)
+func GetCurrentDatabaseVersion(url string) (*VersionShort, string, error) {
+	DB, flavor, err := GetDatabaseConnection(url)
 	var version string
 
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	defer func(DB *sql.DB) {
@@ -88,10 +88,16 @@ func GetCurrentDatabaseVersion(url string) (string, error) {
 	err = row.Scan(&version)
 
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	return version, nil
+	versionShort, err := ParseVersionShort(version)
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	return versionShort, flavor, nil
 }
 
 func GetSetDatabaseVersionQueryString(version *Version) string {

@@ -1,23 +1,58 @@
-	package cmd
+package cmd
 
 import (
 	"fmt"
+	"github.com/giwiro/walkline/core"
+	"log"
 
 	"github.com/spf13/cobra"
 )
 
 // upgradeCmd represents the upgrade command
 var upgradeCmd = &cobra.Command{
-	Use:   "upgrade",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use: 		"upgrade [flags] <target>",
+	Example: 	`  walkline upgrade head
+  walkline upgrade V002
+`,
+	Short: 		"Upgrades database to the target version",
+	Args:       cobra.MinimumNArgs(1),
+	ArgAliases: []string{"revision"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("upgrade called")
+		var targetVersion *core.VersionShort
+		var url string
+		var urlFlag = cmd.Flag("url")
+
+		fmt.Println("urlFlag", urlFlag.Value)
+
+		if len(urlFlag.Value.String()) > 0 {
+			url = urlFlag.Value.String()
+		}
+
+		if args[0] == "head" {
+			targetVersion = nil
+		} else {
+			versionShort, err := core.ParseVersionShort(args[0])
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			targetVersion = versionShort
+		}
+
+		firstNode, _, err := core.BuildMigrationTreeFromPath(migrationPath)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		version, flavor, err := core.GetCurrentDatabaseVersion(url)
+
+		if err != nil {
+			fmt.Println("Could not get current DB version")
+		}
+
+
 	},
 }
 

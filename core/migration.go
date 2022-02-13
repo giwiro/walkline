@@ -25,12 +25,12 @@ type MigrationFailedFile struct {
 	Error    error
 }
 
-func PrintMigrationTree(root *MigrationNode, currentVersion string) {
+func PrintMigrationTree(root *MigrationNode, currentVersion *VersionShort) {
 	fmt.Println("\t[start]")
 	TransverseMigrationTree(root, func(node *MigrationNode) error {
 		var text string
 
-		if node.File.Version.Version == currentVersion {
+		if node.File.Version.Version == currentVersion.Version {
 			text = "(curr)\t"
 		} else {
 			text = "\t"
@@ -59,7 +59,11 @@ func GenerateMigrationString(node *MigrationNode) string {
 func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
 	var nodeList []*MigrationNode
 	var migrationSqlString = ""
-	var isSingleRevision = CompareVersionShort(leftVersion, rightVersion)
+	var isSingleRevision = false
+
+	if rightVersion != nil {
+		isSingleRevision = CompareVersionShort(leftVersion, rightVersion)
+	}
 
 	firstNode, _, err := BuildMigrationTree("/tmp/migrations")
 	var iterNode *MigrationNode
@@ -92,7 +96,7 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *Ve
 			if node.File.Version.Prefix == "V" {
 				nodeList = append(nodeList, node)
 
-				if CompareVersionFullAndShort(rightVersion, node.File.Version) {
+				if rightVersion != nil && CompareVersionFullAndShort(rightVersion, node.File.Version) {
 					return errors.New("found second node")
 				}
 			}
@@ -100,8 +104,10 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *Ve
 			return nil
 		})
 
-		if len(nodeList) == 1 || !CompareVersionFullAndShort(rightVersion, nodeList[len(nodeList) - 1].File.Version) {
-			return "", errors.New("could not find last node")
+		if rightVersion != nil {
+			if len(nodeList) == 1 || !CompareVersionFullAndShort(rightVersion, nodeList[len(nodeList) - 1].File.Version) {
+				return "", errors.New("could not find last node")
+			}
 		}
 	}
 

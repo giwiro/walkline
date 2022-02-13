@@ -37,6 +37,7 @@ var generateCmd = &cobra.Command{
 		}
 
 		transaction, err := core.GenerateMigrationStringFromVersionShortRange(flavor, leftVersion, rightVersion)
+
 		if err != nil {
 			fmt.Println(err)
 		}
