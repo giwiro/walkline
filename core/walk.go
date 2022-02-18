@@ -167,3 +167,15 @@ func TransverseMigrationTree(root *MigrationNode, fn TransverseFunction) {
 		iterNode = iterNode.NextMigrationNode
 	}
 }
+
+func FindMigrationNode(root *MigrationNode, version *VersionShort) *MigrationNode {
+	var n *MigrationNode = nil
+	TransverseMigrationTree(root, func(node *MigrationNode) error {
+		if CompareVersionFullAndShort(version, node.File.Version) {
+			n = node
+			return errors.New("found node")
+		}
+		return nil
+	})
+	return n
+}

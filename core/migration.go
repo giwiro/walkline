@@ -30,7 +30,7 @@ func PrintMigrationTree(root *MigrationNode, currentVersion *VersionShort) {
 	TransverseMigrationTree(root, func(node *MigrationNode) error {
 		var text string
 
-		if node.File.Version.Version == currentVersion.Version {
+		if currentVersion != nil && node.File.Version.Version == currentVersion.Version {
 			text = "(curr)\t"
 		} else {
 			text = "\t"
@@ -56,7 +56,7 @@ func GenerateMigrationString(node *MigrationNode) string {
 	return sql
 }
 
-func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
+func GenerateMigrationStringFromVersionShortRange(flavor string, path string, currentVersion *VersionShort, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
 	var nodeList []*MigrationNode
 	var migrationSqlString = ""
 	var isSingleRevision = false
@@ -65,7 +65,7 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *Ve
 		isSingleRevision = CompareVersionShort(leftVersion, rightVersion)
 	}
 
-	firstNode, _, err := BuildMigrationTree("/tmp/migrations")
+	firstNode, _, err := BuildMigrationTreeFromPath(path)
 	var iterNode *MigrationNode
 
 	if err != nil {
@@ -105,7 +105,7 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *Ve
 		})
 
 		if rightVersion != nil {
-			if len(nodeList) == 1 || !CompareVersionFullAndShort(rightVersion, nodeList[len(nodeList) - 1].File.Version) {
+			if len(nodeList) == 1 || !CompareVersionFullAndShort(rightVersion, nodeList[len(nodeList)-1].File.Version) {
 				return "", errors.New("could not find last node")
 			}
 		}
@@ -115,7 +115,7 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *Ve
 		migrationSqlString += GenerateMigrationString(node)
 	}
 
-	migrationSqlString += GetSetDatabaseVersionQueryString(nodeList[len(nodeList)-1].File.Version) + "\n"
+	migrationSqlString += GetInsertVersionQueryString(currentVersion, GetVersionShortFromFull(nodeList[len(nodeList)-1].File.Version)) + "\n"
 
 	transaction, err := GenerateTransactionString(flavor, migrationSqlString)
 

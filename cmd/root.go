@@ -55,6 +55,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .walkline.yaml)")
 	rootCmd.PersistentFlags().String("flavor", "", "sql database brand [postgresql]")
 	rootCmd.PersistentFlags().String("url", "", "sql database connection url")
+	rootCmd.PersistentFlags().String("path", "", "path of the migration files")
 
 	// Bind with Viper
 	/* err := viper.BindPFlag("flavor", rootCmd.PersistentFlags().Lookup("flavor"))

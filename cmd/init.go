@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/giwiro/walkline/core"
+	"github.com/giwiro/walkline/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -25,16 +26,7 @@ var initCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// var url = "postgres://usher_admin:tiendada123@localhost/usher"
-        var url string
-        var urlFlag = cmd.Flag("url")
-
-        fmt.Println("urlFlag", urlFlag.Value)
-
-        if len(urlFlag.Value.String()) > 0 {
-            url = urlFlag.Value.String()
-        }
-
-        fmt.Println("url", url)
+		var url = utils.GetFlagValue(cmd, "url", "")
 
 		err := core.CreateDatabaseVersionTable(url)
 		if err != nil {

@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	Postgresql string = "postgresql"
+	Postgresql string = "postgres"
 	Mysql             = "mysql"
 	SqlServer         = "sqlserver"
-	Oracle			  = "oracle"
+	Oracle            = "oracle"
 )
 
 var pgTransactionTemplate, _ = template.New("pgTransaction").Parse(`{{define "pgTransaction"}}BEGIN;
@@ -39,7 +39,7 @@ func GetDatabaseConnection(url string) (*sql.DB, string, error) {
 	open, err := sql.Open(flavor, url)
 	if err != nil {
 		fmt.Println(err)
-		return nil, "", err
+		return nil, flavor, err
 	}
 
 	return open, flavor, nil
@@ -73,7 +73,7 @@ func GetCurrentDatabaseVersion(url string) (*VersionShort, string, error) {
 	var version string
 
 	if err != nil {
-		return nil, "", err
+		return nil, flavor, err
 	}
 
 	defer func(DB *sql.DB) {
@@ -88,20 +88,23 @@ func GetCurrentDatabaseVersion(url string) (*VersionShort, string, error) {
 	err = row.Scan(&version)
 
 	if err != nil {
-		return nil, "", err
+		return nil, flavor, err
 	}
 
 	versionShort, err := ParseVersionShort(version)
 
 	if err != nil {
-		return nil, "", err
+		return nil, flavor, err
 	}
 
 	return versionShort, flavor, nil
 }
 
-func GetSetDatabaseVersionQueryString(version *Version) string {
-	return "INSERT INTO walkline_version (version) VALUES ('" + version.Prefix + version.Version + "')"
+func GetInsertVersionQueryString(currentVersion *VersionShort, version *VersionShort) string {
+	if currentVersion == nil {
+		return "INSERT INTO walkline_version (version) VALUES ('" + version.Prefix + version.Version + "');"
+	}
+	return "UPDATE walkline_version SET version='" + version.Prefix + version.Version + "' WHERE version='" + currentVersion.Prefix + currentVersion.Version + "';"
 }
 
 func GenerateTransactionString(flavor string, sql string) (string, error) {
@@ -116,4 +119,55 @@ func GenerateTransactionString(flavor string, sql string) (string, error) {
 	}
 
 	return out.String(), nil
+}
+
+func ExecuteMigrationString(url string, sqlString string) error {
+	DB, _, err := GetDatabaseConnection(url)
+
+	if err != nil {
+		return err
+	}
+
+	defer func(DB *sql.DB) {
+		err := DB.Close()
+		if err != nil {
+			fmt.Println("could not close database connection")
+		}
+	}(DB)
+
+	/*	ctx := context.Background()
+
+		tx, err := DB.BeginTx(ctx, nil)
+
+		if err != nil {
+			return err
+		}*/
+
+	_, err = DB.Exec(sqlString)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+	/*_, txErr := tx.ExecContext(ctx, sqlString)
+
+	if txErr != nil {
+		err := tx.Rollback()
+
+		if err != nil {
+			return err
+		}
+
+		return txErr
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}*/
+
+	return nil
 }

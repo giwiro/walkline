@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/giwiro/walkline/core"
+	"github.com/giwiro/walkline/utils"
 	"github.com/spf13/cobra"
 	"log"
 )
@@ -12,31 +13,41 @@ import (
 var generateCmd = &cobra.Command{
 	Use:        "generate [flags] <revision_range>",
 	Example:    `  walkline generate V001:V002
-  walkline generate U001:U001
+  walkline generate U001:U001 (This will generate just the U001)
+  walkline generate U001 (This will generate just the U001 as well)
+  walkline generate V002 (This will generate all revisions until V002)
   walkline generate --flavor=postgresql U001:U001
 `,
 	Short:      "Generates sql revision based on the version ranged provided",
 	Args:       cobra.MinimumNArgs(1),
 	ArgAliases: []string{"revision_range"},
 	Run: func(cmd *cobra.Command, args []string) {
-		leftVersion, rightVersion, err := core.ParseVersionShortRange(args[0])
+		var leftVersion *core.VersionShort
+		var rightVersion *core.VersionShort
 
-		if err != nil {
-			log.Fatal("Could not parse version range")
-		}
+		var path = utils.GetFlagValue(cmd, "path", "")
+		var flavor = utils.GetFlagValue(cmd, "flavor", "postgresql")
 
-		var flavor string
-		var flavorFlag = cmd.Flag("flavor")
+		singleVersion, err := core.ParseVersionShort(args[0])
 
-		fmt.Println("flavorFlag", flavorFlag.Value)
+		fmt.Println("singleVersion", singleVersion)
 
-		if len(flavorFlag.Value.String()) > 0 {
-			flavor = flavorFlag.Value.String()
+		if err == nil {
+			if singleVersion.Prefix == "U" {
+				leftVersion = singleVersion
+				rightVersion = singleVersion
+			}else {
+				rightVersion = singleVersion
+			}
 		}else {
-			flavor = "postgresql"
+			leftVersion, rightVersion, err = core.ParseVersionShortRange(args[0])
+
+			if err != nil {
+				log.Fatal("Could not parse version range")
+			}
 		}
 
-		transaction, err := core.GenerateMigrationStringFromVersionShortRange(flavor, leftVersion, rightVersion)
+		transaction, err := core.GenerateMigrationStringFromVersionShortRange(flavor, path, leftVersion, leftVersion, rightVersion)
 
 		if err != nil {
 			fmt.Println(err)

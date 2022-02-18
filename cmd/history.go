@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/giwiro/walkline/core"
+	"github.com/giwiro/walkline/utils"
 	"github.com/spf13/cobra"
 	"log"
 )
@@ -12,26 +13,14 @@ var historyCmd = &cobra.Command{
 	Use:   "history",
 	Short: "A brief description of your command",
 	Run: func(cmd *cobra.Command, args []string) {
-		var migrationPath = ""
-		var pathFlag = cmd.Flag("path")
+		var migrationPath = utils.GetFlagValue(cmd, "path", "")
 
-		if len(pathFlag.Value.String()) > 0 {
-			migrationPath = pathFlag.Value.String()
-		}
-
-		var url string
-		var urlFlag = cmd.Flag("url")
-
-		fmt.Println("urlFlag", urlFlag.Value)
-
-		if len(urlFlag.Value.String()) > 0 {
-			url = urlFlag.Value.String()
-		}
+		var url = utils.GetFlagValue(cmd, "url", "")
 
 		versionShort, _, err := core.GetCurrentDatabaseVersion(url)
 
 		if err != nil {
-			fmt.Println("Could not get current DB version")
+			fmt.Println("Could not get current DB version:", err)
 		}
 		firstNode, _, err := core.BuildMigrationTreeFromPath(migrationPath)
 
@@ -51,7 +40,6 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// historyCmd.PersistentFlags().String("foo", "", "A help for foo")
-	historyCmd.PersistentFlags().String("path", "", "Path of the migration files")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
