@@ -6,6 +6,7 @@ import (
 	"github.com/giwiro/walkline/utils"
 	"github.com/spf13/cobra"
 	"log"
+	"os"
 )
 
 
@@ -25,32 +26,53 @@ var generateCmd = &cobra.Command{
 		var leftVersion *core.VersionShort
 		var rightVersion *core.VersionShort
 
-		var path = utils.GetFlagValue(cmd, "path", "")
-		var flavor = utils.GetFlagValue(cmd, "flavor", "postgresql")
+		var path = utils.GetFlagStringValue(cmd, "path", "")
+		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
+		var flavor = utils.GetFlagStringValue(cmd, "flavor", "postgresql")
 
 		singleVersion, err := core.ParseVersionShort(args[0])
 
-		fmt.Println("singleVersion", singleVersion)
+		firstNode, _, buildTreeErr := core.BuildMigrationTreeFromPath(path)
+
+		if buildTreeErr != nil {
+			if verbose == true {
+				log.Println("Could not build migration tree: ", buildTreeErr)
+			}
+			os.Exit(1)
+		}
+
+		if firstNode == nil {
+			if verbose == true {
+				log.Println("Could not found first node")
+			}
+			os.Exit(1)
+		}
 
 		if err == nil {
 			if singleVersion.Prefix == "U" {
 				leftVersion = singleVersion
 				rightVersion = singleVersion
 			}else {
+				leftVersion = core.GetVersionShortFromFull(firstNode.File.Version)
 				rightVersion = singleVersion
 			}
 		}else {
 			leftVersion, rightVersion, err = core.ParseVersionShortRange(args[0])
 
 			if err != nil {
-				log.Fatal("Could not parse version range")
+				if verbose == true {
+					log.Println("Could not parse version range: ", err)
+				}
+				os.Exit(1)
 			}
 		}
 
 		transaction, err := core.GenerateMigrationStringFromVersionShortRange(flavor, path, leftVersion, leftVersion, rightVersion)
 
 		if err != nil {
-			fmt.Println(err)
+			if verbose == true {
+				log.Println("Could not generate migration string:", err)
+			}
 		}
 
 		fmt.Println(transaction)

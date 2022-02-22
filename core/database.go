@@ -25,7 +25,7 @@ COMMIT;
 
 var SqlConnectionUrlRegex = regexp.MustCompile("^([a-z]+?):\\/\\/(.+?):(.+?)@([\\w:\\.]+?)\\/([\\w_]+?)([\\?].+?)?$")
 
-func GetDatabaseConnection(url string) (*sql.DB, string, error) {
+func GetDatabaseConnection(url string, verbose bool) (*sql.DB, string, error) {
 	result := SqlConnectionUrlRegex.FindAllStringSubmatch(url, -1)
 
 	if result == nil || len(result[0]) <= 1 {
@@ -34,9 +34,12 @@ func GetDatabaseConnection(url string) (*sql.DB, string, error) {
 
 	var flavor = result[0][1]
 
-	fmt.Println("Connecting " + "(" + flavor + ")" + " to: " + url)
+	if verbose == true {
+		fmt.Println("Connecting " + "(" + flavor + ")" + " to: " + url)
+	}
 
 	open, err := sql.Open(flavor, url)
+
 	if err != nil {
 		fmt.Println(err)
 		return nil, flavor, err
@@ -45,8 +48,8 @@ func GetDatabaseConnection(url string) (*sql.DB, string, error) {
 	return open, flavor, nil
 }
 
-func CreateDatabaseVersionTable(url string) error {
-	DB, _, err := GetDatabaseConnection(url)
+func CreateDatabaseVersionTable(url string, verbose bool) error {
+	DB, _, err := GetDatabaseConnection(url, verbose)
 
 	if err != nil {
 		return err
@@ -68,8 +71,8 @@ func CreateDatabaseVersionTable(url string) error {
 	return nil
 }
 
-func GetCurrentDatabaseVersion(url string) (*VersionShort, string, error) {
-	DB, flavor, err := GetDatabaseConnection(url)
+func GetCurrentDatabaseVersion(url string, verbose bool) (*VersionShort, string, error) {
+	DB, flavor, err := GetDatabaseConnection(url, verbose)
 	var version string
 
 	if err != nil {
@@ -109,6 +112,8 @@ func GetInsertVersionQueryString(currentVersion *VersionShort, version *VersionS
 
 func GenerateTransactionString(flavor string, sql string) (string, error) {
 	var out bytes.Buffer
+	fmt.Println("flavor2: ", flavor)
+	fmt.Println("Postgresql: ", Postgresql)
 	if flavor == Postgresql {
 		err := pgTransactionTemplate.ExecuteTemplate(&out, "pgTransaction", sql)
 		if err != nil {
@@ -121,8 +126,8 @@ func GenerateTransactionString(flavor string, sql string) (string, error) {
 	return out.String(), nil
 }
 
-func ExecuteMigrationString(url string, sqlString string) error {
-	DB, _, err := GetDatabaseConnection(url)
+func ExecuteMigrationString(url string, sqlString string, verbose bool) error {
+	DB, _, err := GetDatabaseConnection(url, verbose)
 
 	if err != nil {
 		return err
@@ -168,6 +173,4 @@ func ExecuteMigrationString(url string, sqlString string) error {
 	if err != nil {
 		return err
 	}*/
-
-	return nil
 }

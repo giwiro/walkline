@@ -5,7 +5,6 @@ import (
 	"github.com/giwiro/walkline/core"
 	"github.com/giwiro/walkline/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // initCmd represents the init command
@@ -13,24 +12,25 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Long: `Initializes the version table in the default schema`,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		fmt.Println("flags", cmd.Flags().Lookup("url"))
+		// fmt.Println("flags", cmd.Flags().Lookup("url"))
 		err := cmd.MarkFlagRequired("url")
 		if err != nil {
 			return 
 		}
-		fmt.Println("pflags", cmd.PersistentFlags().Lookup("url"))
-		err = viper.BindPFlag("url", cmd.Flags().Lookup("url"))
-		if err != nil {
+		// fmt.Println("pflags", cmd.PersistentFlags().Lookup("url"))
+		// err = viper.BindPFlag("url", cmd.Flags().Lookup("url"))
+		/*if err != nil {
 			return 
-		}
+		}*/
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// var url = "postgres://usher_admin:tiendada123@localhost/usher"
-		var url = utils.GetFlagValue(cmd, "url", "")
+		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
+		var url = utils.GetFlagStringValue(cmd, "url", "")
 
-		err := core.CreateDatabaseVersionTable(url)
-		if err != nil {
-			fmt.Println(err)
+		err := core.CreateDatabaseVersionTable(url, verbose)
+		if err != nil && verbose == true {
+			fmt.Println("Could not initialize version table: ", err)
 		}
 	},
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/giwiro/walkline/utils"
 	"github.com/spf13/cobra"
 	"log"
+	"os"
 )
 
 // upgradeCmd represents the upgrade command
@@ -21,8 +22,9 @@ var upgradeCmd = &cobra.Command{
 		var firstVersion *core.VersionShort
 		var targetVersion *core.VersionShort
 
-		var url = utils.GetFlagValue(cmd, "url", "")
-		var path = utils.GetFlagValue(cmd, "path", "")
+		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
+		var url = utils.GetFlagStringValue(cmd, "url", "")
+		var path = utils.GetFlagStringValue(cmd, "path", "")
 
 		if args[0] == "head" {
 			targetVersion = nil
@@ -30,11 +32,17 @@ var upgradeCmd = &cobra.Command{
 			versionShort, err := core.ParseVersionShort(args[0])
 
 			if err != nil {
-				log.Fatal("Bad version format: ", err)
+				if verbose == true {
+					log.Println("Bad version format: ", err)
+				}
+				os.Exit(1)
 			}
 
 			if versionShort.Prefix == "U" {
-				log.Fatal("Target version cannot be an undo migration")
+				if verbose == true {
+					log.Println("Target version cannot be an undo migration: ", err)
+				}
+				os.Exit(1)
 			}
 
 			targetVersion = versionShort
@@ -43,40 +51,54 @@ var upgradeCmd = &cobra.Command{
 		firstNode, _, err := core.BuildMigrationTreeFromPath(path)
 
 		if err != nil {
-			log.Fatal(err)
+			if verbose == true {
+				log.Println("Could not build migration tree: ", err)
+			}
+			os.Exit(1)
 		}
 
-		currentVersion, flavor, err := core.GetCurrentDatabaseVersion(url)
+		currentVersion, flavor, err := core.GetCurrentDatabaseVersion(url, verbose)
 
 		if err != nil {
-			fmt.Println("Could not get current DB version: ", err)
+			if verbose == true {
+				fmt.Println("Could not get current DB version: ", err)
+			}
 			firstVersion = &core.VersionShort{
 				Prefix: firstNode.File.Version.Prefix,
 				Version: firstNode.File.Version.Version,
 			}
 		} else {
-			var currenNode = core.FindMigrationNode(firstNode, currentVersion)
+			var currentNode = core.FindMigrationNode(firstNode, currentVersion)
 
-			if currenNode == nil || currenNode.NextMigrationNode == nil {
+			if currentNode != nil && currentNode.NextMigrationNode != nil {
 				firstVersion =  &core.VersionShort{
-					Prefix: currenNode.NextMigrationNode.File.Version.Prefix,
-					Version: currenNode.NextMigrationNode.File.Version.Version,
+					Prefix: currentNode.NextMigrationNode.File.Version.Prefix,
+					Version: currentNode.NextMigrationNode.File.Version.Version,
 				}
 			} else {
-				log.Fatal("Could not generate first migration version")
+				if verbose == true {
+					log.Println("Could not generate first migration version")
+				}
+				os.Exit(1)
 			}
 		}
 
 		migration, err := core.GenerateMigrationStringFromVersionShortRange(flavor, path, currentVersion, firstVersion, targetVersion)
 
 		if err != nil {
-			log.Fatal("Could not generate migration: ", err)
+			if verbose == true {
+				log.Println("Could not generate migration: ", err)
+			}
+			os.Exit(1)
 		}
 
-		err = core.ExecuteMigrationString(url, migration)
+		err = core.ExecuteMigrationString(url, migration, verbose)
 
 		if err != nil {
-			log.Fatal("Could not execute transaction: ", err)
+			if verbose == true {
+				log.Println("Could not execute transaction: ", err)
+			}
+			os.Exit(1)
 		}
 	},
 }
@@ -89,7 +111,6 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// upgradeCmd.PersistentFlags().String("foo", "", "A help for foo")
-	upgradeCmd.PersistentFlags().String("path", "", "Path of the migration files")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:

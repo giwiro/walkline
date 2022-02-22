@@ -6,6 +6,7 @@ import (
 	"github.com/giwiro/walkline/utils"
 	"github.com/spf13/cobra"
 	"log"
+	"os"
 )
 
 // historyCmd represents the history command
@@ -13,19 +14,24 @@ var historyCmd = &cobra.Command{
 	Use:   "history",
 	Short: "A brief description of your command",
 	Run: func(cmd *cobra.Command, args []string) {
-		var migrationPath = utils.GetFlagValue(cmd, "path", "")
+		var migrationPath = utils.GetFlagStringValue(cmd, "path", "")
 
-		var url = utils.GetFlagValue(cmd, "url", "")
+		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
+		var url = utils.GetFlagStringValue(cmd, "url", "")
 
-		versionShort, _, err := core.GetCurrentDatabaseVersion(url)
+		versionShort, _, err := core.GetCurrentDatabaseVersion(url, verbose)
 
-		if err != nil {
+		if err != nil && verbose == true {
 			fmt.Println("Could not get current DB version:", err)
 		}
+
 		firstNode, _, err := core.BuildMigrationTreeFromPath(migrationPath)
 
 		if err != nil {
-			log.Fatal(err)
+			if verbose == true {
+				log.Println("Could not build migration tree: ", err)
+			}
+			os.Exit(1)
 		}
 		// fmt.Println(firstNode.NextMigrationNode.File.Content)
 		core.PrintMigrationTree(firstNode, versionShort)

@@ -46,16 +46,17 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	log.SetFlags(0)
+	log.SetFlags(1)
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.walkline.yaml)")
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .walkline.yaml)")
-	rootCmd.PersistentFlags().String("flavor", "", "sql database brand [postgresql]")
-	rootCmd.PersistentFlags().String("url", "", "sql database connection url")
-	rootCmd.PersistentFlags().String("path", "", "path of the migration files")
+	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .walkline.yaml)")
+	rootCmd.PersistentFlags().StringP("flavor", "f", "", "sql database brand [postgresql]")
+	rootCmd.PersistentFlags().StringP("url", "u", "", "sql database connection url")
+	rootCmd.PersistentFlags().StringP("path", "p", "", "path of the migration files")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "add verbosity")
 
 	// Bind with Viper
 	/* err := viper.BindPFlag("flavor", rootCmd.PersistentFlags().Lookup("flavor"))
@@ -66,10 +67,6 @@ func init() {
 	if err != nil {
 		fmt.Println(err)
 	} */
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func initConfig() {
@@ -100,10 +97,12 @@ func initConfig() {
 		viper.AddConfigPath(home)
 		viper.SetConfigName("walkline")
 		viper.SetConfigType("yaml")
-	}
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-		fmt.Println("flavor:", viper.Get("flavor"))
+
+		if err := viper.ReadInConfig(); err == nil {
+			if viper.GetBool("verbose") == true {
+				fmt.Println("Using config file:", viper.ConfigFileUsed())
+			}
+		}
 	}
 }
