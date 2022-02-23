@@ -40,6 +40,21 @@ Flags:
 
 ```
 
+## Configuration
+
+You may optionally use a config file in order to automatically configure the flags. 
+The file must be named `walkline.yaml` and has to be in the working directory.
+For example:
+
+```yaml
+url: postgres://user:password@localhost/database?sslmode=disable
+# The path flag can be relative (to the working directory) or absolute
+path: ./relative/path/to/migration
+schema: user_schema
+verbose: false
+```
+
+
 ## License
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

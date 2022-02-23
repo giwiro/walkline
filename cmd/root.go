@@ -24,7 +24,12 @@ var rootCmd = &cobra.Command{
 		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
 
 		if verbose == true {
-			fmt.Println("Using config file:", viper.ConfigFileUsed())
+			var configFile = viper.ConfigFileUsed()
+			if configFile == "" {
+				fmt.Println("Config file not found")
+			} else {
+				fmt.Println("Using config file:", viper.ConfigFileUsed())
+			}
 		}
 	},
 	Short: "Simplistic sql database migration tool",
