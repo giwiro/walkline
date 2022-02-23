@@ -66,7 +66,7 @@ var downgradeCmd = &cobra.Command{
 
 		if err != nil {
 			if verbose == true {
-				log.Println("Could not execute transaction: ", err)
+				log.Println("Could not execute transaction:", err)
 			}
 			os.Exit(1)
 		}

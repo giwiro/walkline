@@ -33,14 +33,14 @@ var upgradeCmd = &cobra.Command{
 
 			if err != nil {
 				if verbose == true {
-					log.Println("Bad version format: ", err)
+					log.Println("Bad version format:", err)
 				}
 				os.Exit(1)
 			}
 
 			if versionShort.Prefix == "U" {
 				if verbose == true {
-					log.Println("Target version cannot be an undo migration: ", err)
+					log.Println("Target version cannot be an undo migration:", err)
 				}
 				os.Exit(1)
 			}
@@ -103,7 +103,7 @@ var upgradeCmd = &cobra.Command{
 
 		if err != nil {
 			if verbose == true {
-				log.Println("Could not execute transaction: ", err)
+				log.Println("Could not execute transaction:", err)
 			}
 			os.Exit(1)
 		}

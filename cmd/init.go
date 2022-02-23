@@ -30,7 +30,7 @@ var initCmd = &cobra.Command{
 
 		err := core.CreateDatabaseVersionTable(url, verbose)
 		if err != nil && verbose == true {
-			fmt.Println("Could not initialize version table: ", err)
+			fmt.Println("Could not initialize version table:", err)
 		}
 	},
 }

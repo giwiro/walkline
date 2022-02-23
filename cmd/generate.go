@@ -63,7 +63,7 @@ var generateCmd = &cobra.Command{
 
 			if err != nil {
 				if verbose == true {
-					log.Println("Could not parse version range: ", err)
+					log.Println("Could not parse version range:", err)
 				}
 				os.Exit(1)
 			}
