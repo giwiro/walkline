@@ -27,10 +27,10 @@ var generateCmd = &cobra.Command{
 
 		var path = utils.GetFlagStringValue(cmd, "path", "")
 		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
-		// var flavor = utils.GetFlagStringValue(cmd, "flavor", "postgresql")
+		var schema = utils.GetFlagStringValue(cmd, "schema", "")
 		var url = utils.GetFlagStringValue(cmd, "url", "")
 
-		_, flavor, err := core.GetCurrentDatabaseVersion(url, verbose)
+		_, flavor, err := core.GetCurrentDatabaseVersion(url, verbose, schema)
 
 		singleVersion, err := core.ParseVersionShort(args[0])
 
@@ -69,7 +69,7 @@ var generateCmd = &cobra.Command{
 			}
 		}
 
-		transaction, err := core.GenerateMigrationStringFromVersionShortRange(flavor, path, leftVersion, leftVersion, rightVersion)
+		transaction, err := core.GenerateMigrationStringFromVersionShortRange(flavor, path, schema, leftVersion, leftVersion, rightVersion)
 
 		if err != nil {
 			if verbose == true {

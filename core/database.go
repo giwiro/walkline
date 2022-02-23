@@ -25,6 +25,16 @@ COMMIT;
 
 var SqlConnectionUrlRegex = regexp.MustCompile("^([a-z]+?):\\/\\/(.+?):(.+?)@([\\w:\\.]+?)\\/([\\w_]+?)([\\?].+?)?$")
 
+func GetTableName(schema string) string {
+	var tableName = "walkline_version"
+
+	if schema != "" {
+		tableName = fmt.Sprintf("%s.%s", schema, tableName)
+	}
+
+	return tableName
+}
+
 func GetDatabaseConnection(url string, verbose bool) (*sql.DB, string, error) {
 	result := SqlConnectionUrlRegex.FindAllStringSubmatch(url, -1)
 
@@ -35,7 +45,7 @@ func GetDatabaseConnection(url string, verbose bool) (*sql.DB, string, error) {
 	var flavor = result[0][1]
 
 	if verbose == true {
-		fmt.Println("Connecting " + "(" + flavor + ")" + " to: " + url)
+		fmt.Printf("Connecting (%s) to: %s\n", flavor, url)
 	}
 
 	open, err := sql.Open(flavor, url)
@@ -48,7 +58,9 @@ func GetDatabaseConnection(url string, verbose bool) (*sql.DB, string, error) {
 	return open, flavor, nil
 }
 
-func CreateDatabaseVersionTable(url string, verbose bool) error {
+func CreateDatabaseVersionTable(url string, verbose bool, schema string) error {
+	var tableName = GetTableName(schema)
+
 	DB, _, err := GetDatabaseConnection(url, verbose)
 
 	if err != nil {
@@ -62,13 +74,13 @@ func CreateDatabaseVersionTable(url string, verbose bool) error {
 		}
 	}(DB)
 
-	_, err = DB.Query("CREATE TABLE walkline_version (version VARCHAR)")
+	_, err = DB.Query(fmt.Sprintf("CREATE TABLE %s (version VARCHAR)", tableName))
 
 	if err != nil {
 		return err
 	}
 
-	_, err = DB.Query("INSERT INTO walkline_version (version) VALUES ('')")
+	_, err = DB.Query(fmt.Sprintf("INSERT INTO %s (version) VALUES ('')", tableName))
 
 	if err != nil {
 		return err
@@ -77,7 +89,9 @@ func CreateDatabaseVersionTable(url string, verbose bool) error {
 	return nil
 }
 
-func GetCurrentDatabaseVersion(url string, verbose bool) (*VersionShort, string, error) {
+func GetCurrentDatabaseVersion(url string, verbose bool, schema string) (*VersionShort, string, error) {
+	var tableName = GetTableName(schema)
+
 	DB, flavor, err := GetDatabaseConnection(url, verbose)
 	var version string
 
@@ -92,7 +106,7 @@ func GetCurrentDatabaseVersion(url string, verbose bool) (*VersionShort, string,
 		}
 	}(DB)
 
-	row := DB.QueryRow("SELECT version FROM walkline_version")
+	row := DB.QueryRow(fmt.Sprintf("SELECT version FROM %s", tableName))
 
 	err = row.Scan(&version)
 
@@ -113,17 +127,24 @@ func GetCurrentDatabaseVersion(url string, verbose bool) (*VersionShort, string,
 	return versionShort, flavor, nil
 }
 
-func GetInsertVersionQueryString(currentVersion *VersionShort, version *VersionShort) string {
+func GetInsertVersionQueryString(currentVersion *VersionShort, version *VersionShort, schema string) string {
+	var tableName = GetTableName(schema)
+
+	if schema != "" {
+		tableName = fmt.Sprintf("%s.%s", schema, tableName)
+	}
+
+	const updateFmt = "UPDATE %s SET version='%s' WHERE version='%s';"
+
 	if currentVersion == nil {
-		return "UPDATE walkline_version SET version='" + version.Prefix + version.Version + "' WHERE version='';"
-		// return "INSERT INTO walkline_version (version) VALUES ('" + version.Prefix + version.Version + "');"
+		return fmt.Sprintf(updateFmt, tableName, version.Prefix + version.Version, "")
 	}
 
 	if version == nil {
-		return "UPDATE walkline_version SET version='' WHERE version='" + currentVersion.Prefix + currentVersion.Version + "';"
+		return fmt.Sprintf(updateFmt, tableName, "", currentVersion.Prefix + currentVersion.Version)
 	}
 
-	return "UPDATE walkline_version SET version='" + version.Prefix + version.Version + "' WHERE version='" + currentVersion.Prefix + currentVersion.Version + "';"
+	return fmt.Sprintf(updateFmt, tableName, version.Prefix + version.Version, currentVersion.Prefix + currentVersion.Version)
 }
 
 func GenerateTransactionString(flavor string, sql string) (string, error) {

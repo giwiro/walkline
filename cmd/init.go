@@ -24,11 +24,11 @@ var initCmd = &cobra.Command{
 		}*/
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// var url = "postgres://usher_admin:tiendada123@localhost/usher"
+		var schema = utils.GetFlagStringValue(cmd, "schema", "")
 		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
 		var url = utils.GetFlagStringValue(cmd, "url", "")
 
-		err := core.CreateDatabaseVersionTable(url, verbose)
+		err := core.CreateDatabaseVersionTable(url, verbose, schema)
 		if err != nil && verbose == true {
 			fmt.Println("Could not initialize version table:", err)
 		}

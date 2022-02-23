@@ -63,6 +63,7 @@ func init() {
 	// rootCmd.PersistentFlags().StringP("flavor", "f", "", "sql database brand [postgresql]")
 	rootCmd.PersistentFlags().StringP("url", "u", "", "sql database connection url")
 	rootCmd.PersistentFlags().StringP("path", "p", "", "path of the migration files")
+	rootCmd.PersistentFlags().StringP("schema", "s", "", "select the version table schema")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "add verbosity")
 
 	// Bind with Viper

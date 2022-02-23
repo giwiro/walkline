@@ -25,6 +25,7 @@ var upgradeCmd = &cobra.Command{
 		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
 		var url = utils.GetFlagStringValue(cmd, "url", "")
 		var path = utils.GetFlagStringValue(cmd, "path", "")
+		var schema = utils.GetFlagStringValue(cmd, "schema", "")
 
 		if args[0] == "head" {
 			targetVersion = nil
@@ -57,7 +58,7 @@ var upgradeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		currentVersion, flavor, err := core.GetCurrentDatabaseVersion(url, verbose)
+		currentVersion, flavor, err := core.GetCurrentDatabaseVersion(url, verbose, schema)
 
 		if err != nil {
 			if verbose == true {
@@ -90,7 +91,7 @@ var upgradeCmd = &cobra.Command{
 			}
 		}
 
-		migration, err := core.GenerateMigrationStringFromVersionShortRange(flavor, path, currentVersion, firstVersion, targetVersion)
+		migration, err := core.GenerateMigrationStringFromVersionShortRange(flavor, path, schema, currentVersion, firstVersion, targetVersion)
 
 		if err != nil {
 			if verbose == true {
