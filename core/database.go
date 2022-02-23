@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	Postgresql string = "postgresql"
+	Postgresql string = "postgres"
 	Mysql             = "mysql"
 	SqlServer         = "sqlserver"
-	Oracle			  = "oracle"
+	Oracle            = "oracle"
 )
 
 var pgTransactionTemplate, _ = template.New("pgTransaction").Parse(`{{define "pgTransaction"}}BEGIN;
@@ -23,32 +23,35 @@ var pgTransactionTemplate, _ = template.New("pgTransaction").Parse(`{{define "pg
 COMMIT;
 {{end}}`)
 
-var SqlConnectionUrlRegex = regexp.MustCompile("^([a-z]+?):\\/\\/(.+?):(.+?)@([\\w:\\.]+?)\\/([\\w]+?)([\\?].+?)?$")
+var SqlConnectionUrlRegex = regexp.MustCompile("^([a-z]+?):\\/\\/(.+?):(.+?)@([\\w:\\.]+?)\\/([\\w_]+?)([\\?].+?)?$")
 
-func GetDatabaseConnection(url string) (*sql.DB, error) {
+func GetDatabaseConnection(url string, verbose bool) (*sql.DB, string, error) {
 	result := SqlConnectionUrlRegex.FindAllStringSubmatch(url, -1)
 
 	if result == nil || len(result[0]) <= 1 {
-		return nil, errors.New("bad format")
+		return nil, "", errors.New("connection url bad format")
 	}
 
-	fmt.Println("Connecting " + "(" + result[0][1] + ")" + " to: " + url)
-	fmt.Println()
+	var flavor = result[0][1]
 
-	open, err := sql.Open(result[0][1], url)
+	if verbose == true {
+		fmt.Println("Connecting " + "(" + flavor + ")" + " to: " + url)
+	}
+
+	open, err := sql.Open(flavor, url)
+
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return nil, flavor, err
 	}
 
-	return open, nil
+	return open, flavor, nil
 }
 
-func CreateDatabaseVersionTable(url string) error {
-	DB, err := GetDatabaseConnection(url)
+func CreateDatabaseVersionTable(url string, verbose bool) error {
+	DB, _, err := GetDatabaseConnection(url, verbose)
 
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -65,15 +68,21 @@ func CreateDatabaseVersionTable(url string) error {
 		return err
 	}
 
+	_, err = DB.Query("INSERT INTO walkline_version (version) VALUES ('')")
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func GetCurrentDatabaseVersion(url string) (string, error) {
-	DB, err := GetDatabaseConnection(url)
+func GetCurrentDatabaseVersion(url string, verbose bool) (*VersionShort, string, error) {
+	DB, flavor, err := GetDatabaseConnection(url, verbose)
 	var version string
 
 	if err != nil {
-		return "", err
+		return nil, flavor, err
 	}
 
 	defer func(DB *sql.DB) {
@@ -87,19 +96,39 @@ func GetCurrentDatabaseVersion(url string) (string, error) {
 
 	err = row.Scan(&version)
 
-	if err != nil {
-		return "", err
+	if err != nil && err != sql.ErrNoRows {
+		return nil, flavor, err
 	}
 
-	return version, nil
+	if len(version) == 0 {
+		return nil, flavor, nil
+	}
+
+	versionShort, err := ParseVersionShort(version)
+
+	if err != nil {
+		return nil, flavor, err
+	}
+
+	return versionShort, flavor, nil
 }
 
-func GetSetDatabaseVersionQueryString(version *Version) string {
-	return "INSERT INTO walkline_version (version) VALUES ('" + version.Prefix + version.Version + "')"
+func GetInsertVersionQueryString(currentVersion *VersionShort, version *VersionShort) string {
+	if currentVersion == nil {
+		return "UPDATE walkline_version SET version='" + version.Prefix + version.Version + "' WHERE version='';"
+		// return "INSERT INTO walkline_version (version) VALUES ('" + version.Prefix + version.Version + "');"
+	}
+
+	if version == nil {
+		return "UPDATE walkline_version SET version='' WHERE version='" + currentVersion.Prefix + currentVersion.Version + "';"
+	}
+
+	return "UPDATE walkline_version SET version='" + version.Prefix + version.Version + "' WHERE version='" + currentVersion.Prefix + currentVersion.Version + "';"
 }
 
 func GenerateTransactionString(flavor string, sql string) (string, error) {
 	var out bytes.Buffer
+
 	if flavor == Postgresql {
 		err := pgTransactionTemplate.ExecuteTemplate(&out, "pgTransaction", sql)
 		if err != nil {
@@ -110,4 +139,53 @@ func GenerateTransactionString(flavor string, sql string) (string, error) {
 	}
 
 	return out.String(), nil
+}
+
+func ExecuteMigrationString(url string, sqlString string, verbose bool) error {
+	DB, _, err := GetDatabaseConnection(url, verbose)
+
+	if err != nil {
+		return err
+	}
+
+	defer func(DB *sql.DB) {
+		err := DB.Close()
+		if err != nil {
+			fmt.Println("could not close database connection")
+		}
+	}(DB)
+
+	/*	ctx := context.Background()
+
+		tx, err := DB.BeginTx(ctx, nil)
+
+		if err != nil {
+			return err
+		}*/
+
+	_, err = DB.Exec(sqlString)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+	/*_, txErr := tx.ExecContext(ctx, sqlString)
+
+	if txErr != nil {
+		err := tx.Rollback()
+
+		if err != nil {
+			return err
+		}
+
+		return txErr
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}*/
 }

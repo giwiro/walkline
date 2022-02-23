@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"strconv"
 )
 
 type MigrationNode struct {
@@ -25,12 +26,12 @@ type MigrationFailedFile struct {
 	Error    error
 }
 
-func PrintMigrationTree(root *MigrationNode, currentVersion string) {
+func PrintMigrationTree(root *MigrationNode, currentVersion *VersionShort) {
 	fmt.Println("\t[start]")
 	TransverseMigrationTree(root, func(node *MigrationNode) error {
 		var text string
 
-		if node.File.Version.Version == currentVersion {
+		if currentVersion != nil && node.File.Version.Version == currentVersion.Version {
 			text = "(curr)\t"
 		} else {
 			text = "\t"
@@ -56,12 +57,16 @@ func GenerateMigrationString(node *MigrationNode) string {
 	return sql
 }
 
-func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
+func GenerateMigrationStringFromVersionShortRange(flavor string, path string, currentVersion *VersionShort, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
 	var nodeList []*MigrationNode
 	var migrationSqlString = ""
-	var isSingleRevision = CompareVersionShort(leftVersion, rightVersion)
+	var isSingleRevision = false
 
-	firstNode, _, err := BuildMigrationTree("/tmp/migrations")
+	if rightVersion != nil {
+		isSingleRevision = CompareVersionShort(leftVersion, rightVersion)
+	}
+
+	firstNode, _, err := BuildMigrationTreeFromPath(path)
 	var iterNode *MigrationNode
 
 	if err != nil {
@@ -92,7 +97,7 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *Ve
 			if node.File.Version.Prefix == "V" {
 				nodeList = append(nodeList, node)
 
-				if CompareVersionFullAndShort(rightVersion, node.File.Version) {
+				if rightVersion != nil && CompareVersionFullAndShort(rightVersion, node.File.Version) {
 					return errors.New("found second node")
 				}
 			}
@@ -100,8 +105,10 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *Ve
 			return nil
 		})
 
-		if len(nodeList) == 1 || !CompareVersionFullAndShort(rightVersion, nodeList[len(nodeList) - 1].File.Version) {
-			return "", errors.New("could not find last node")
+		if rightVersion != nil {
+			if len(nodeList) == 1 || !CompareVersionFullAndShort(rightVersion, nodeList[len(nodeList)-1].File.Version) {
+				return "", errors.New("could not find last node")
+			}
 		}
 	}
 
@@ -109,7 +116,68 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, leftVersion *Ve
 		migrationSqlString += GenerateMigrationString(node)
 	}
 
-	migrationSqlString += GetSetDatabaseVersionQueryString(nodeList[len(nodeList)-1].File.Version) + "\n"
+	migrationSqlString += GetInsertVersionQueryString(currentVersion, GetVersionShortFromFull(nodeList[len(nodeList)-1].File.Version)) + "\n"
+
+	transaction, err := GenerateTransactionString(flavor, migrationSqlString)
+
+	if err != nil {
+		return "", err
+	}
+
+	return transaction, nil
+}
+
+func GenerateConsecutiveDowngradesMigrationString(flavor string, path string, currentVersion *VersionShort, times int) (string, error) {
+	var nodeList []*MigrationNode
+	var migrationSqlString = ""
+	var iterNode *MigrationNode
+	var iterTimes = times
+	var finalVersion *VersionShort
+
+	firstNode, _, err := BuildMigrationTreeFromPath(path)
+
+	if err != nil {
+		return "", err
+	}
+
+	var currentNode = FindMigrationNode(firstNode, currentVersion)
+
+	if currentNode == nil {
+		return "", err
+	}
+
+	iterNode = currentNode
+
+	for iterNode != nil && iterTimes > 0 {
+		if iterNode.UndoMigrationNode == nil {
+			return "", errors.New("not enough consecutive undo migrations, " + strconv.Itoa(iterTimes) + " remaining")
+		}
+
+		nodeList = append(nodeList, iterNode.UndoMigrationNode)
+
+		if iterNode.PrevMigrationNode != nil {
+			finalVersion = GetVersionShortFromFull(iterNode.PrevMigrationNode.File.Version)
+			iterNode = iterNode.PrevMigrationNode
+		} else {
+			finalVersion = nil
+			iterNode = nil
+		}
+		iterTimes -= 1
+	}
+
+	if iterTimes > 0 {
+		return "", errors.New("not enough consecutive undo migrations, " + strconv.Itoa(iterTimes) + " remaining")
+	}
+
+	if len(nodeList) == 0 {
+		return "", errors.New("empty downgrades")
+	}
+
+	for _, node := range nodeList {
+		migrationSqlString += GenerateMigrationString(node)
+	}
+
+	migrationSqlString += GetInsertVersionQueryString(currentVersion, finalVersion)
 
 	transaction, err := GenerateTransactionString(flavor, migrationSqlString)
 

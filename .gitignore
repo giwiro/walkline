@@ -22,3 +22,9 @@ go.work
 
 # IntelliJ
 .idea
+
+# Sample config file
+walkline.yaml
+
+# Generated binary
+walkline

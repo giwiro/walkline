@@ -20,6 +20,13 @@ var rootCmd = &cobra.Command{
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
+
+		if verbose == true {
+			fmt.Println("Using config file:", viper.ConfigFileUsed())
+		}
+	},
 	Short: "Simplistic sql database migration tool",
 	Long: `
                _ _    _            
@@ -52,23 +59,21 @@ func init() {
 	// will be global for your application.
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.walkline.yaml)")
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .walkline.yaml)")
-	rootCmd.PersistentFlags().String("flavor", "", "sql database brand [postgresql]")
-	rootCmd.PersistentFlags().String("url", "", "sql database connection url")
+	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .walkline.yaml)")
+	// rootCmd.PersistentFlags().StringP("flavor", "f", "", "sql database brand [postgresql]")
+	rootCmd.PersistentFlags().StringP("url", "u", "", "sql database connection url")
+	rootCmd.PersistentFlags().StringP("path", "p", "", "path of the migration files")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "add verbosity")
 
 	// Bind with Viper
-	err := viper.BindPFlag("flavor", rootCmd.PersistentFlags().Lookup("flavor"))
+	/* err := viper.BindPFlag("flavor", rootCmd.PersistentFlags().Lookup("flavor"))
 	if err != nil {
 		fmt.Println(err)
 	}
 	err = viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
 	if err != nil {
 		fmt.Println(err)
-	}
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	} */
 }
 
 func initConfig() {
@@ -76,7 +81,6 @@ func initConfig() {
 		// Use config file from the flag
 		viper.SetConfigFile(cfgFile)
 	} else {
-		fmt.Println("find!")
 		// Find home directory
 		home, err := os.UserHomeDir()
 
@@ -100,12 +104,7 @@ func initConfig() {
 		viper.AddConfigPath(home)
 		viper.SetConfigName("walkline")
 		viper.SetConfigType("yaml")
-	}
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-		fmt.Println("flavor:", viper.Get("flavor"))
-	} else {
-		log.Fatal("Can't read config:", err)
+		_ = viper.ReadInConfig()
 	}
 }
