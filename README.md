@@ -10,6 +10,36 @@ Windows, macOS, Linux
 #### Supported databases
 PostgreSQL
 
+## Usage
+```
+               _ _    _            
+              | | |  | (_)           
+__      __ _ _| | | _| |_ _ __   ___ 
+\ \ /\ / / _` | | |/ | | | '_ \ / _ \
+ \ V  V | (_| | |   <| | | | | |  __/
+  \_/\_/ \__,_|_|_|\_|_|_|_| |_|\___|
+        Simplistic sql database migration tool
+
+Usage:
+  walkline [command]
+
+Available Commands:
+  downgrade   Downgrades database n times
+  generate    Generates sql revision based on the version ranged provided
+  help        Help about any command
+  history     A brief description of your command
+  init        Initializes the version table in the default schema
+  upgrade     Upgrades database to the target version
+
+Flags:
+  -h, --help          help for walkline
+  -p, --path string   path of the migration files
+  -u, --url string    sql database connection url
+  -v, --verbose       add verbosity
+      --version       version for walkline
+
+```
+
 ## License
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
