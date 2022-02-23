@@ -1,2 +1,4 @@
-url: postgres://user:password@localhost/usher?sslmode=disable
-flavor: postgresql
+url: postgres://user:password@localhost/database?sslmode=disable
+path: .
+verbose: false
+schema: user_schema

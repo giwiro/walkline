@@ -37,10 +37,10 @@ func PrintMigrationTree(root *MigrationNode, currentVersion *VersionShort) {
 			text = "\t"
 		}
 
-		text += node.File.Version.Prefix + node.File.Version.Version + " (" + node.File.Version.Description + ")"
+		text += fmt.Sprintf("%s (%s)", node.File.Version.Prefix + node.File.Version.Version, node.File.Version.Description)
 
 		if node.UndoMigrationNode != nil {
-			text += "\t-> " + node.UndoMigrationNode.File.Version.Prefix + node.UndoMigrationNode.File.Version.Version + " (" + node.UndoMigrationNode.File.Version.Description + ")"
+			text += fmt.Sprintf("\t-> %s (%s)", node.UndoMigrationNode.File.Version.Prefix + node.UndoMigrationNode.File.Version.Version, node.UndoMigrationNode.File.Version.Description)
 		}
 
 		fmt.Println(text)
@@ -57,7 +57,7 @@ func GenerateMigrationString(node *MigrationNode) string {
 	return sql
 }
 
-func GenerateMigrationStringFromVersionShortRange(flavor string, path string, currentVersion *VersionShort, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
+func GenerateMigrationStringFromVersionShortRange(flavor string, path string, schema string, currentVersion *VersionShort, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
 	var nodeList []*MigrationNode
 	var migrationSqlString = ""
 	var isSingleRevision = false
@@ -116,7 +116,7 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, path string, cu
 		migrationSqlString += GenerateMigrationString(node)
 	}
 
-	migrationSqlString += GetInsertVersionQueryString(currentVersion, GetVersionShortFromFull(nodeList[len(nodeList)-1].File.Version)) + "\n"
+	migrationSqlString += GetInsertVersionQueryString(currentVersion, GetVersionShortFromFull(nodeList[len(nodeList)-1].File.Version), schema) + "\n"
 
 	transaction, err := GenerateTransactionString(flavor, migrationSqlString)
 
@@ -127,7 +127,7 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, path string, cu
 	return transaction, nil
 }
 
-func GenerateConsecutiveDowngradesMigrationString(flavor string, path string, currentVersion *VersionShort, times int) (string, error) {
+func GenerateConsecutiveDowngradesMigrationString(flavor string, path string, schema string, currentVersion *VersionShort, times int) (string, error) {
 	var nodeList []*MigrationNode
 	var migrationSqlString = ""
 	var iterNode *MigrationNode
@@ -177,7 +177,7 @@ func GenerateConsecutiveDowngradesMigrationString(flavor string, path string, cu
 		migrationSqlString += GenerateMigrationString(node)
 	}
 
-	migrationSqlString += GetInsertVersionQueryString(currentVersion, finalVersion)
+	migrationSqlString += GetInsertVersionQueryString(currentVersion, finalVersion, schema)
 
 	transaction, err := GenerateTransactionString(flavor, migrationSqlString)
 

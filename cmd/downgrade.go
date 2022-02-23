@@ -24,6 +24,7 @@ var downgradeCmd = &cobra.Command{
 		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
 		var url = utils.GetFlagStringValue(cmd, "url", "")
 		var path = utils.GetFlagStringValue(cmd, "path", "")
+		var schema = utils.GetFlagStringValue(cmd, "schema", "")
 
 		if !downgradeTimesRegex.MatchString(args[0]) {
 			fmt.Println("Downgrade times must be a number")
@@ -37,7 +38,7 @@ var downgradeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		currentVersion, flavor, err := core.GetCurrentDatabaseVersion(url, verbose)
+		currentVersion, flavor, err := core.GetCurrentDatabaseVersion(url, verbose, schema)
 
 		if err != nil {
 			if verbose == true {
@@ -53,7 +54,7 @@ var downgradeCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		migration, err := core.GenerateConsecutiveDowngradesMigrationString(flavor, path, currentVersion, times)
+		migration, err := core.GenerateConsecutiveDowngradesMigrationString(flavor, path, schema, currentVersion, times)
 
 		if err != nil {
 			if verbose == true {
@@ -66,7 +67,7 @@ var downgradeCmd = &cobra.Command{
 
 		if err != nil {
 			if verbose == true {
-				log.Println("Could not execute transaction: ", err)
+				log.Println("Could not execute transaction:", err)
 			}
 			os.Exit(1)
 		}

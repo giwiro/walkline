@@ -18,8 +18,9 @@ var historyCmd = &cobra.Command{
 
 		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
 		var url = utils.GetFlagStringValue(cmd, "url", "")
+		var schema = utils.GetFlagStringValue(cmd, "schema", "")
 
-		versionShort, _, err := core.GetCurrentDatabaseVersion(url, verbose)
+		versionShort, _, err := core.GetCurrentDatabaseVersion(url, verbose, schema)
 
 		if (versionShort == nil || err != nil) && verbose == true {
 			fmt.Println("Could not get current DB version:", err)
