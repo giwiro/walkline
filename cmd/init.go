@@ -10,7 +10,7 @@ import (
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:  "init",
-	Short: `Initializes the version table in the default schema`,
+	Short: `Initializes the version table in the provided schema`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// fmt.Println("flags", cmd.Flags().Lookup("url"))
 		/*err := cmd.MarkFlagRequired("url")
