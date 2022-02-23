@@ -89,9 +89,9 @@ func CompareVersionFullAndShort(leftVersionShort *VersionShort, rightVersionShor
 	return false
 }
 
-func GetVersionShortFromFull(versionShort *Version) *VersionShort {
+func GetVersionShortFromFull(version *Version) *VersionShort {
 	return &VersionShort{
-		Prefix: versionShort.Prefix,
-		Version: versionShort.Version,
+		Prefix:  version.Prefix,
+		Version: version.Version,
 	}
 }

@@ -52,7 +52,7 @@ var upgradeCmd = &cobra.Command{
 
 		if err != nil {
 			if verbose == true {
-				log.Println("Could not build migration tree: ", err)
+				log.Println("Could not build migration tree:", err)
 			}
 			os.Exit(1)
 		}
@@ -61,18 +61,25 @@ var upgradeCmd = &cobra.Command{
 
 		if err != nil {
 			if verbose == true {
-				fmt.Println("Could not get current DB version: ", err)
+				fmt.Println("Could not get current DB version:", err)
+			}
+			os.Exit(1)
+		}
+
+		if currentVersion == nil {
+			if verbose == true {
+				fmt.Println("Found empty current DB version")
 			}
 			firstVersion = &core.VersionShort{
-				Prefix: firstNode.File.Version.Prefix,
+				Prefix:  firstNode.File.Version.Prefix,
 				Version: firstNode.File.Version.Version,
 			}
 		} else {
 			var currentNode = core.FindMigrationNode(firstNode, currentVersion)
 
 			if currentNode != nil && currentNode.NextMigrationNode != nil {
-				firstVersion =  &core.VersionShort{
-					Prefix: currentNode.NextMigrationNode.File.Version.Prefix,
+				firstVersion = &core.VersionShort{
+					Prefix:  currentNode.NextMigrationNode.File.Version.Prefix,
 					Version: currentNode.NextMigrationNode.File.Version.Version,
 				}
 			} else {
@@ -87,7 +94,7 @@ var upgradeCmd = &cobra.Command{
 
 		if err != nil {
 			if verbose == true {
-				log.Println("Could not generate migration: ", err)
+				log.Println("Could not generate migration:", err)
 			}
 			os.Exit(1)
 		}

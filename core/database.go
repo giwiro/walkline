@@ -68,6 +68,12 @@ func CreateDatabaseVersionTable(url string, verbose bool) error {
 		return err
 	}
 
+	_, err = DB.Query("INSERT INTO walkline_version (version) VALUES ('')")
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -90,8 +96,12 @@ func GetCurrentDatabaseVersion(url string, verbose bool) (*VersionShort, string,
 
 	err = row.Scan(&version)
 
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, flavor, err
+	}
+
+	if len(version) == 0 {
+		return nil, flavor, nil
 	}
 
 	versionShort, err := ParseVersionShort(version)
@@ -105,15 +115,20 @@ func GetCurrentDatabaseVersion(url string, verbose bool) (*VersionShort, string,
 
 func GetInsertVersionQueryString(currentVersion *VersionShort, version *VersionShort) string {
 	if currentVersion == nil {
-		return "INSERT INTO walkline_version (version) VALUES ('" + version.Prefix + version.Version + "');"
+		return "UPDATE walkline_version SET version='" + version.Prefix + version.Version + "' WHERE version='';"
+		// return "INSERT INTO walkline_version (version) VALUES ('" + version.Prefix + version.Version + "');"
 	}
+
+	if version == nil {
+		return "UPDATE walkline_version SET version='' WHERE version='" + currentVersion.Prefix + currentVersion.Version + "';"
+	}
+
 	return "UPDATE walkline_version SET version='" + version.Prefix + version.Version + "' WHERE version='" + currentVersion.Prefix + currentVersion.Version + "';"
 }
 
 func GenerateTransactionString(flavor string, sql string) (string, error) {
 	var out bytes.Buffer
-	fmt.Println("flavor2: ", flavor)
-	fmt.Println("Postgresql: ", Postgresql)
+
 	if flavor == Postgresql {
 		err := pgTransactionTemplate.ExecuteTemplate(&out, "pgTransaction", sql)
 		if err != nil {

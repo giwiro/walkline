@@ -9,11 +9,10 @@ import (
 	"os"
 )
 
-
 // generateCmd represents the generate command
 var generateCmd = &cobra.Command{
-	Use:        "generate [flags] <revision_range>",
-	Example:    `  walkline generate V001:V002
+	Use: "generate [flags] <revision_range>",
+	Example: `  walkline generate V001:V002
   walkline generate U001:U001 (This will generate just the U001)
   walkline generate U001 (This will generate just the U001 as well)
   walkline generate V002 (This will generate all revisions until V002)
@@ -28,7 +27,10 @@ var generateCmd = &cobra.Command{
 
 		var path = utils.GetFlagStringValue(cmd, "path", "")
 		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
-		var flavor = utils.GetFlagStringValue(cmd, "flavor", "postgresql")
+		// var flavor = utils.GetFlagStringValue(cmd, "flavor", "postgresql")
+		var url = utils.GetFlagStringValue(cmd, "url", "")
+
+		_, flavor, err := core.GetCurrentDatabaseVersion(url, verbose)
 
 		singleVersion, err := core.ParseVersionShort(args[0])
 
@@ -36,7 +38,7 @@ var generateCmd = &cobra.Command{
 
 		if buildTreeErr != nil {
 			if verbose == true {
-				log.Println("Could not build migration tree: ", buildTreeErr)
+				log.Println("Could not build migration tree:", buildTreeErr)
 			}
 			os.Exit(1)
 		}
@@ -52,11 +54,11 @@ var generateCmd = &cobra.Command{
 			if singleVersion.Prefix == "U" {
 				leftVersion = singleVersion
 				rightVersion = singleVersion
-			}else {
+			} else {
 				leftVersion = core.GetVersionShortFromFull(firstNode.File.Version)
 				rightVersion = singleVersion
 			}
-		}else {
+		} else {
 			leftVersion, rightVersion, err = core.ParseVersionShortRange(args[0])
 
 			if err != nil {

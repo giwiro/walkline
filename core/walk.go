@@ -10,7 +10,7 @@ import (
 	"sort"
 )
 
-type TransverseFunction func (node *MigrationNode) error
+type TransverseFunction func(node *MigrationNode) error
 
 func processMigrationFile(path string, name string, version *Version, channel chan *MigrationFile) {
 	file, err := ioutil.ReadFile(path)
@@ -58,7 +58,7 @@ func BuildMigrationTreeFromPath(dir string) (*MigrationNode, *[]*MigrationFailed
 		return firstNode, failedNodes, nil
 	}
 
-	return nil, nil, nil
+	return nil, nil, errors.New("empty migration tree")
 }
 
 func BuildMigrationTree(dir string) (*MigrationNode, *[]*MigrationFailedFile, error) {
@@ -89,7 +89,7 @@ func BuildMigrationTree(dir string) (*MigrationNode, *[]*MigrationFailedFile, er
 	})
 
 	for i := 0; i < filesLength; i++ {
-		files = append(files, <- channel)
+		files = append(files, <-channel)
 	}
 
 	if len(files) == 0 {
@@ -109,7 +109,7 @@ func BuildMigrationTree(dir string) (*MigrationNode, *[]*MigrationFailedFile, er
 	}
 
 	var firstNode = &MigrationNode{
-		File: files[0],
+		File:              files[0],
 		UndoMigrationNode: nil,
 		NextMigrationNode: nil,
 		PrevMigrationNode: nil,
@@ -119,7 +119,7 @@ func BuildMigrationTree(dir string) (*MigrationNode, *[]*MigrationFailedFile, er
 
 	for i := 1; i < len(files); i++ {
 		var node = &MigrationNode{
-			File: files[i],
+			File:              files[i],
 			UndoMigrationNode: nil,
 			NextMigrationNode: nil,
 			PrevMigrationNode: iterNode,

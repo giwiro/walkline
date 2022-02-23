@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"strconv"
 )
 
 type MigrationNode struct {
@@ -116,6 +117,67 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, path string, cu
 	}
 
 	migrationSqlString += GetInsertVersionQueryString(currentVersion, GetVersionShortFromFull(nodeList[len(nodeList)-1].File.Version)) + "\n"
+
+	transaction, err := GenerateTransactionString(flavor, migrationSqlString)
+
+	if err != nil {
+		return "", err
+	}
+
+	return transaction, nil
+}
+
+func GenerateConsecutiveDowngradesMigrationString(flavor string, path string, currentVersion *VersionShort, times int) (string, error) {
+	var nodeList []*MigrationNode
+	var migrationSqlString = ""
+	var iterNode *MigrationNode
+	var iterTimes = times
+	var finalVersion *VersionShort
+
+	firstNode, _, err := BuildMigrationTreeFromPath(path)
+
+	if err != nil {
+		return "", err
+	}
+
+	var currentNode = FindMigrationNode(firstNode, currentVersion)
+
+	if currentNode == nil {
+		return "", err
+	}
+
+	iterNode = currentNode
+
+	for iterNode != nil && iterTimes > 0 {
+		if iterNode.UndoMigrationNode == nil {
+			return "", errors.New("not enough consecutive undo migrations, " + strconv.Itoa(iterTimes) + " remaining")
+		}
+
+		nodeList = append(nodeList, iterNode.UndoMigrationNode)
+
+		if iterNode.PrevMigrationNode != nil {
+			finalVersion = GetVersionShortFromFull(iterNode.PrevMigrationNode.File.Version)
+			iterNode = iterNode.PrevMigrationNode
+		} else {
+			finalVersion = nil
+			iterNode = nil
+		}
+		iterTimes -= 1
+	}
+
+	if iterTimes > 0 {
+		return "", errors.New("not enough consecutive undo migrations, " + strconv.Itoa(iterTimes) + " remaining")
+	}
+
+	if len(nodeList) == 0 {
+		return "", errors.New("empty downgrades")
+	}
+
+	for _, node := range nodeList {
+		migrationSqlString += GenerateMigrationString(node)
+	}
+
+	migrationSqlString += GetInsertVersionQueryString(currentVersion, finalVersion)
 
 	transaction, err := GenerateTransactionString(flavor, migrationSqlString)
 

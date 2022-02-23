@@ -21,7 +21,7 @@ var historyCmd = &cobra.Command{
 
 		versionShort, _, err := core.GetCurrentDatabaseVersion(url, verbose)
 
-		if err != nil && verbose == true {
+		if (versionShort == nil || err != nil) && verbose == true {
 			fmt.Println("Could not get current DB version:", err)
 		}
 
@@ -29,7 +29,7 @@ var historyCmd = &cobra.Command{
 
 		if err != nil {
 			if verbose == true {
-				log.Println("Could not build migration tree: ", err)
+				log.Println("Could not build migration tree:", err)
 			}
 			os.Exit(1)
 		}

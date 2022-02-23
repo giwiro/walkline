@@ -20,6 +20,13 @@ var rootCmd = &cobra.Command{
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		var verbose = utils.GetFlagBooleanValue(cmd, "verbose", false)
+
+		if verbose == true {
+			fmt.Println("Using config file:", viper.ConfigFileUsed())
+		}
+	},
 	Short: "Simplistic sql database migration tool",
 	Long: `
                _ _    _            
@@ -46,14 +53,14 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	log.SetFlags(1)
+	log.SetFlags(0)
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.walkline.yaml)")
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .walkline.yaml)")
-	rootCmd.PersistentFlags().StringP("flavor", "f", "", "sql database brand [postgresql]")
+	// rootCmd.PersistentFlags().StringP("flavor", "f", "", "sql database brand [postgresql]")
 	rootCmd.PersistentFlags().StringP("url", "u", "", "sql database connection url")
 	rootCmd.PersistentFlags().StringP("path", "p", "", "path of the migration files")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "add verbosity")
@@ -98,11 +105,6 @@ func initConfig() {
 		viper.SetConfigName("walkline")
 		viper.SetConfigType("yaml")
 
-
-		if err := viper.ReadInConfig(); err == nil {
-			if viper.GetBool("verbose") == true {
-				fmt.Println("Using config file:", viper.ConfigFileUsed())
-			}
-		}
+		_ = viper.ReadInConfig()
 	}
 }

@@ -9,18 +9,18 @@ import (
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
-	Use:   "init",
-	Long: `Initializes the version table in the default schema`,
+	Use:  "init",
+	Short: `Initializes the version table in the default schema`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		// fmt.Println("flags", cmd.Flags().Lookup("url"))
-		err := cmd.MarkFlagRequired("url")
+		/*err := cmd.MarkFlagRequired("url")
 		if err != nil {
-			return 
-		}
+			return
+		}*/
 		// fmt.Println("pflags", cmd.PersistentFlags().Lookup("url"))
 		// err = viper.BindPFlag("url", cmd.Flags().Lookup("url"))
 		/*if err != nil {
-			return 
+			return
 		}*/
 	},
 	Run: func(cmd *cobra.Command, args []string) {
