@@ -29,7 +29,7 @@ func GetTableName(schema string) string {
 	var tableName = "walkline_version"
 
 	if schema != "" {
-		tableName = fmt.Sprintf("%s.%s", schema, tableName)
+		tableName = fmt.Sprintf("%s.walkline_version", schema)
 	}
 
 	return tableName
@@ -129,10 +129,6 @@ func GetCurrentDatabaseVersion(url string, verbose bool, schema string) (*Versio
 
 func GetInsertVersionQueryString(currentVersion *VersionShort, version *VersionShort, schema string) string {
 	var tableName = GetTableName(schema)
-
-	if schema != "" {
-		tableName = fmt.Sprintf("%s.%s", schema, tableName)
-	}
 
 	const updateFmt = "UPDATE %s SET version='%s' WHERE version='%s';"
 
