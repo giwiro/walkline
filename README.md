@@ -48,7 +48,7 @@ For example:
 
 ```yaml
 url: postgres://user:password@localhost/database?sslmode=disable
-# The path flag can be relative (to the working directory) or absolute
+# This path MUST be absolute (do not use ~)
 path: ./relative/path/to/migration
 schema: user_schema
 verbose: false
