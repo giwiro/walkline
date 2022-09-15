@@ -64,10 +64,14 @@ func GenerateMigrationString(node *MigrationNode) string {
     return sql
 }
 
-func GenerateMigrationStringFromVersionShortRange(flavor string, path string, schema string, currentVersion *VersionShort, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
+func GenerateMigrationStringFromVersionShortRange(init bool, flavor string, path string, schema string, currentVersion *VersionShort, leftVersion *VersionShort, rightVersion *VersionShort) (string, error) {
     var nodeList []*MigrationNode
     var migrationSqlString = ""
     var isSingleRevision = false
+
+    if init == true {
+        migrationSqlString += GetCreateVersionTableQueryString(schema)
+    }
 
     if rightVersion != nil {
         isSingleRevision = EqualsVersionShort(leftVersion, rightVersion)
@@ -123,7 +127,7 @@ func GenerateMigrationStringFromVersionShortRange(flavor string, path string, sc
         migrationSqlString += GenerateMigrationString(node)
     }
 
-    migrationSqlString += GetInsertVersionQueryString(currentVersion, GetVersionShortFromFull(nodeList[len(nodeList)-1].File.Version), schema) + "\n"
+    migrationSqlString += GetUpdateVersionQueryString(init, currentVersion, GetVersionShortFromFull(nodeList[len(nodeList)-1].File.Version), schema) + "\n"
 
     transaction, err := GenerateTransactionString(flavor, migrationSqlString)
 
@@ -184,7 +188,7 @@ func GenerateConsecutiveDowngradesMigrationString(flavor string, path string, sc
         migrationSqlString += GenerateMigrationString(node)
     }
 
-    migrationSqlString += GetInsertVersionQueryString(currentVersion, finalVersion, schema)
+    migrationSqlString += GetUpdateVersionQueryString(false, currentVersion, finalVersion, schema)
 
     transaction, err := GenerateTransactionString(flavor, migrationSqlString)
 

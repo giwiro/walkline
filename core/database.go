@@ -1,20 +1,20 @@
 package core
 
 import (
-	"bytes"
-	"database/sql"
-	"errors"
-	"fmt"
-	_ "github.com/lib/pq"
-	"regexp"
-	"text/template"
+    "bytes"
+    "database/sql"
+    "errors"
+    "fmt"
+    _ "github.com/lib/pq"
+    "regexp"
+    "text/template"
 )
 
 const (
-	Postgresql string = "postgres"
-	Mysql             = "mysql"
-	SqlServer         = "sqlserver"
-	Oracle            = "oracle"
+    Postgresql string = "postgres"
+    Mysql             = "mysql"
+    SqlServer         = "sqlserver"
+    Oracle            = "oracle"
 )
 
 var pgTransactionTemplate, _ = template.New("pgTransaction").Parse(`{{define "pgTransaction"}}BEGIN;
@@ -25,184 +25,188 @@ COMMIT;
 
 var SqlConnectionUrlRegex = regexp.MustCompile("^([a-z]+?):\\/\\/(.+?):(.+?)@([\\w:\\.]+?)\\/([\\w_]+?)([\\?].+?)?$")
 
-func GetTableName(schema string) string {
-	var tableName = "walkline_version"
+func GetVersionTableName(schema string) string {
+    var tableName = "walkline_version"
 
-	if schema != "" {
-		tableName = fmt.Sprintf("%s.walkline_version", schema)
-	}
+    if schema != "" {
+        tableName = fmt.Sprintf("%s.walkline_version", schema)
+    }
 
-	return tableName
+    return tableName
 }
 
 func GetDatabaseConnection(url string, verbose bool) (*sql.DB, string, error) {
-	result := SqlConnectionUrlRegex.FindAllStringSubmatch(url, -1)
+    result := SqlConnectionUrlRegex.FindAllStringSubmatch(url, -1)
 
-	if result == nil || len(result[0]) <= 1 {
-		return nil, "", errors.New("connection url bad format")
-	}
+    if result == nil || len(result[0]) <= 1 {
+        return nil, "", errors.New("connection url bad format")
+    }
 
-	var flavor = result[0][1]
+    var flavor = result[0][1]
 
-	if verbose == true {
-		fmt.Printf("Connecting (%s) to: %s\n", flavor, url)
-	}
+    if verbose == true {
+        fmt.Printf("Connecting (%s) to: %s\n", flavor, url)
+    }
 
-	open, err := sql.Open(flavor, url)
+    open, err := sql.Open(flavor, url)
 
-	if err != nil {
-		fmt.Println(err)
-		return nil, flavor, err
-	}
+    if err != nil {
+        fmt.Println(err)
+        return nil, flavor, err
+    }
 
-	return open, flavor, nil
+    return open, flavor, nil
 }
 
-func CreateDatabaseVersionTable(url string, verbose bool, schema string) error {
-	var tableName = GetTableName(schema)
+func GetCreateVersionTableQueryString(schema string) string {
+    var tableName = GetVersionTableName(schema)
+    return fmt.Sprintf(
+        "CREATE TABLE %s (version VARCHAR);\n"+
+            "INSERT INTO %s (version) VALUES ('');\n\n",
+        tableName,
+        tableName,
+    )
+}
 
-	DB, _, err := GetDatabaseConnection(url, verbose)
+func CreateVersionTable(url string, verbose bool, schema string) error {
+    var crateTableQueryString = GetCreateVersionTableQueryString(schema)
 
-	if err != nil {
-		return err
-	}
+    DB, _, err := GetDatabaseConnection(url, verbose)
 
-	defer func(DB *sql.DB) {
-		err := DB.Close()
-		if err != nil {
-			fmt.Println("could not close database connection")
-		}
-	}(DB)
+    if err != nil {
+        return err
+    }
 
-	_, err = DB.Query(fmt.Sprintf("CREATE TABLE %s (version VARCHAR)", tableName))
+    defer func(DB *sql.DB) {
+        err := DB.Close()
+        if err != nil {
+            fmt.Println("could not close database connection")
+        }
+    }(DB)
 
-	if err != nil {
-		return err
-	}
+    _, err = DB.Query(crateTableQueryString)
 
-	_, err = DB.Query(fmt.Sprintf("INSERT INTO %s (version) VALUES ('')", tableName))
+    if err != nil {
+        return err
+    }
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+    return nil
 }
 
 func GetCurrentDatabaseVersion(url string, verbose bool, schema string) (*VersionShort, string, error) {
-	var tableName = GetTableName(schema)
+    var tableName = GetVersionTableName(schema)
 
-	DB, flavor, err := GetDatabaseConnection(url, verbose)
-	var version string
+    DB, flavor, err := GetDatabaseConnection(url, verbose)
+    var version string
 
-	if err != nil {
-		return nil, flavor, err
-	}
+    if err != nil {
+        return nil, flavor, err
+    }
 
-	defer func(DB *sql.DB) {
-		err := DB.Close()
-		if err != nil {
-			fmt.Println("could not close database connection")
-		}
-	}(DB)
+    defer func(DB *sql.DB) {
+        err := DB.Close()
+        if err != nil {
+            fmt.Println("could not close database connection")
+        }
+    }(DB)
 
-	row := DB.QueryRow(fmt.Sprintf("SELECT version FROM %s", tableName))
+    row := DB.QueryRow(fmt.Sprintf("SELECT version FROM %s", tableName))
 
-	err = row.Scan(&version)
+    err = row.Scan(&version)
 
-	if err != nil && err != sql.ErrNoRows {
-		return nil, flavor, err
-	}
+    if err != nil && err != sql.ErrNoRows {
+        return nil, flavor, err
+    }
 
-	if len(version) == 0 {
-		return nil, flavor, nil
-	}
+    if len(version) == 0 {
+        return nil, flavor, nil
+    }
 
-	versionShort, err := ParseVersionShort(version)
+    versionShort, err := ParseVersionShort(version)
 
-	if err != nil {
-		return nil, flavor, err
-	}
+    if err != nil {
+        return nil, flavor, err
+    }
 
-	return versionShort, flavor, nil
+    return versionShort, flavor, nil
 }
 
-func GetInsertVersionQueryString(currentVersion *VersionShort, version *VersionShort, schema string) string {
-	var tableName = GetTableName(schema)
+func GetUpdateVersionQueryString(init bool, currentVersion *VersionShort, version *VersionShort, schema string) string {
+    var tableName = GetVersionTableName(schema)
 
-	const updateFmt = "UPDATE %s SET version='%s' WHERE version='%s';"
+    const updateFmt = "UPDATE %s SET version='%s' WHERE version='%s';"
 
-	if currentVersion == nil {
-		return fmt.Sprintf(updateFmt, tableName, version.Prefix + version.Version, "")
-	}
+    if currentVersion == nil || init {
+        return fmt.Sprintf(updateFmt, tableName, version.Prefix+version.Version, "")
+    }
 
-	if version == nil {
-		return fmt.Sprintf(updateFmt, tableName, "", currentVersion.Prefix + currentVersion.Version)
-	}
+    if version == nil {
+        return fmt.Sprintf(updateFmt, tableName, "", currentVersion.Prefix+currentVersion.Version)
+    }
 
-	return fmt.Sprintf(updateFmt, tableName, version.Prefix + version.Version, currentVersion.Prefix + currentVersion.Version)
+    return fmt.Sprintf(updateFmt, tableName, version.Prefix+version.Version, currentVersion.Prefix+currentVersion.Version)
 }
 
 func GenerateTransactionString(flavor string, sql string) (string, error) {
-	var out bytes.Buffer
+    var out bytes.Buffer
 
-	if flavor == Postgresql {
-		err := pgTransactionTemplate.ExecuteTemplate(&out, "pgTransaction", sql)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		return "", errors.New("invalid flavor")
-	}
+    if flavor == Postgresql {
+        err := pgTransactionTemplate.ExecuteTemplate(&out, "pgTransaction", sql)
+        if err != nil {
+            return "", err
+        }
+    } else {
+        return "", errors.New("invalid flavor")
+    }
 
-	return out.String(), nil
+    return out.String(), nil
 }
 
 func ExecuteMigrationString(url string, sqlString string, verbose bool) error {
-	DB, _, err := GetDatabaseConnection(url, verbose)
+    DB, _, err := GetDatabaseConnection(url, verbose)
 
-	if err != nil {
-		return err
-	}
+    if err != nil {
+        return err
+    }
 
-	defer func(DB *sql.DB) {
-		err := DB.Close()
-		if err != nil {
-			fmt.Println("could not close database connection")
-		}
-	}(DB)
+    defer func(DB *sql.DB) {
+        err := DB.Close()
+        if err != nil {
+            fmt.Println("could not close database connection")
+        }
+    }(DB)
 
-	/*	ctx := context.Background()
+    /*	ctx := context.Background()
 
-		tx, err := DB.BeginTx(ctx, nil)
+    	tx, err := DB.BeginTx(ctx, nil)
 
-		if err != nil {
-			return err
-		}*/
+    	if err != nil {
+    		return err
+    	}*/
 
-	_, err = DB.Exec(sqlString)
+    _, err = DB.Exec(sqlString)
 
-	if err != nil {
-		return err
-	}
+    if err != nil {
+        return err
+    }
 
-	return nil
+    return nil
 
-	/*_, txErr := tx.ExecContext(ctx, sqlString)
+    /*_, txErr := tx.ExecContext(ctx, sqlString)
 
-	if txErr != nil {
-		err := tx.Rollback()
+      if txErr != nil {
+      	err := tx.Rollback()
 
-		if err != nil {
-			return err
-		}
+      	if err != nil {
+      		return err
+      	}
 
-		return txErr
-	}
+      	return txErr
+      }
 
-	err = tx.Commit()
+      err = tx.Commit()
 
-	if err != nil {
-		return err
-	}*/
+      if err != nil {
+      	return err
+      }*/
 }
