@@ -1,4 +1,5 @@
 url: postgres://user:password@localhost/database?sslmode=disable
+# This path MUST be absolute (do not use ~)
 path: .
 schema: user_schema
 verbose: false
