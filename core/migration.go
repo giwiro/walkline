@@ -31,7 +31,7 @@ type MigrationFailedFile struct {
 func PrintMigrationTree(root *MigrationNode, currentVersion *VersionShort) {
     t := table.NewWriter()
     t.SetOutputMirror(os.Stdout)
-    t.AppendHeader(table.Row{"Current", "Version", "Undo (Downgrade)"})
+    t.AppendHeader(table.Row{"Curr", "Version", "Undo (Downgrade)"})
 
     TransverseMigrationTree(root, func(node *MigrationNode) error {
         var currentText = ""
@@ -39,7 +39,7 @@ func PrintMigrationTree(root *MigrationNode, currentVersion *VersionShort) {
         var undoText = ""
 
         if currentVersion != nil && node.File.Version.Version == currentVersion.Version {
-            currentText = "*"
+            currentText = " 👉"
         }
 
         if node.UndoMigrationNode != nil {
