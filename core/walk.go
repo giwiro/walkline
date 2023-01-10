@@ -179,3 +179,20 @@ func FindMigrationNode(root *MigrationNode, version *VersionShort) *MigrationNod
     })
     return n
 }
+
+func FindPreviousVersion(root *MigrationNode, targetVersion *VersionShort) *Version {
+    var n *MigrationNode = nil
+    TransverseMigrationTree(root, func(node *MigrationNode) error {
+        if EqualsVersionFullAndShort(targetVersion, node.File.Version) {
+            return errors.New("found node")
+        }
+        n = node
+        return nil
+    })
+
+    if n != nil {
+        return n.File.Version
+    }
+
+    return nil
+}

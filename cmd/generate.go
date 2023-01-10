@@ -23,6 +23,7 @@ var generateCmd = &cobra.Command{
     ArgAliases: []string{"revision_range"},
     Run: func(cmd *cobra.Command, args []string) {
         var leftVersion *core.VersionShort
+        var leftPrevVersion *core.VersionShort
         var rightVersion *core.VersionShort
 
         var path = utils.GetFlagStringValue(cmd, "path", "")
@@ -70,7 +71,14 @@ var generateCmd = &cobra.Command{
             }
         }
 
-        transaction, err := core.GenerateMigrationStringFromVersionShortRange(init, flavor, path, schema, leftVersion, leftVersion, rightVersion)
+        // Find previous left version
+        leftPrevVersionFull := core.FindPreviousVersion(firstNode, leftVersion)
+
+        if leftPrevVersionFull != nil {
+            leftPrevVersion = core.GetVersionShortFromFull(leftPrevVersionFull)
+        }
+
+        transaction, err := core.GenerateMigrationStringFromVersionShortRange(init, flavor, path, schema, leftPrevVersion, leftVersion, rightVersion)
 
         if err != nil {
             if verbose == true {
